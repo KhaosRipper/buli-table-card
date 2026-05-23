@@ -30,13 +30,3 @@ Die Karte benötigt ein passendes Daten-Array im Backend. Am einfachsten install
 
 ### Dashboard-Einbindung
 Füge die Karte über den manuellen Code-Editor deines Dashboards (oder im Raw-Konfigurationseditor) hinzu.
-
-**Für die 1. Bundesliga:**
-```yaml
-type: 'custom:buli-table-card'
-entity: sensor.bund_scoreboard2
-
-**Für die 2. Bundesliga:**
-```yaml
-type: 'custom:buli-table-card'
-entity: sensor.bund_2_scoreboard
