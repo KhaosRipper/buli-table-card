@@ -121,7 +121,7 @@ class BuliTableCard extends HTMLElement {
       const f = getStat(x.stats, 'F');
       const a = getStat(x.stats, 'A');
       const gd = getStat(x.stats, 'GD');
-      const pts = getStat(x.stats, 'PTS');
+      const pts = getStat(x.stats, 'P');
 
       // Tordifferenz farblich hervorheben (Grün bei +, Rot bei -)
       let gdClass = '';
