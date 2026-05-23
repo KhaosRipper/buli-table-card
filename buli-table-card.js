@@ -1,6 +1,8 @@
 class BundesligaTableCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
+
+    // 1. Grundstruktur der Karte einmalig aufbauen
     if (!this.content) {
       const card = document.createElement('ha-card');
       const style = document.createElement('style');
@@ -62,6 +64,20 @@ class BundesligaTableCard extends HTMLElement {
       card.appendChild(this.content);
       this.appendChild(card);
     }
+
+    // 2. BREMSE: Prüfen, ob sich der Zustand des spezifischen Bundesliga-Sensors überhaupt geändert hat
+    const entityId = this.config?.entity;
+    if (entityId && hass.states[entityId]) {
+      const currentLastUpdated = hass.states[entityId].last_updated;
+      
+      // Wenn der Zeitstempel identisch ist mit dem letzten Mal, tun wir einfach gar nichts
+      if (this._lastUpdated === currentLastUpdated) {
+        return;
+      }
+      this._lastUpdated = currentLastUpdated;
+    }
+
+    // 3. Nur wenn es wirklich neue Daten gibt, wird gerendert
     this.render();
   }
 
