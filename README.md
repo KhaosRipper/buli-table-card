@@ -34,4 +34,4 @@ Füge die Karte über den manuellen Code-Editor deines Dashboards (oder im Raw-K
 ```yaml
 type: 'custom:buli-table-card'
 entity: sensor.bund_scoreboard2 # Für die 1. Bundesliga
-# entity: sensor.bund_2_scoreboard # Für die 2. Bundesliga (falls aktiviert)
+entity: sensor.bund_2_scoreboard # Für die 2. Bundesliga (falls aktiviert)
