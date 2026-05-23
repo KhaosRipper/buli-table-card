@@ -19,7 +19,7 @@ Diese Custom Lovelace Card bringt das vollständige Datengerüst der 1. und 2. B
 
 ### Voraussetzungen (Backend)
 Die Karte benötigt ein passendes Daten-Array im Backend. Am einfachsten installierst du dafür die dazugehörige UI-basierte HACS-Integration, die die Sensoren ganz ohne YAML-Code für dich erstellt:
-👉 [KhaosRipper/buli-table-integration](https://github.com/KhaosRipper/buli-table-integration)
+👉 [KhaosRipper/Bundesliga-Tabellen-integration](https://github.com/KhaosRipper/Bundesliga-Tabellen-integration)
 
 ### Installation über HACS
 1. Navigiere in Home Assistant zu **HACS** &rarr; **Dashboards**.
