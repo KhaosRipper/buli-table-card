@@ -3,7 +3,7 @@
 A custom Lovelace dashboard card to display a clean, comprehensive German Bundesliga table inspired by the full view of bundesliga.com. It is optimized to look stunning on modern, transparent Home Assistant dashboards and completely bypasses theme-specific styling conflicts.
 
 ### Preview / Vorschau
-<img width="516" height="705" alt="grafik" src="https://github.com/user-attachments/assets/fcf1c19c-4792-41d5-ae47-f77f2766c617" />
+<img width="520" height="785" alt="image" src="https://github.com/user-attachments/assets/e125712f-4dfa-42a6-a516-ba676e55acf8" />
 
 ---
 
