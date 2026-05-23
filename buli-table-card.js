@@ -1,190 +1,191 @@
-class BuliTableCard extends HTMLElement {
+class BundesligaTableCard extends HTMLElement {
   set hass(hass) {
+    this._hass = hass;
     if (!this.content) {
-      this.attachShadow({ mode: 'open' });
-      this.shadowRoot.innerHTML = `
-        <style>
-          ha-card {
-            background: transparent;
-            border: none;
-            box-shadow: none;
-            font-size: 11px;
-            font-family: var(--paper-font-body1_-_font-family, sans-serif);
-            color: var(--primary-text-color);
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-          }
-          th {
-            color: var(--secondary-text-color);
-            font-weight: 600;
-            padding: 8px 3px;
-            border-bottom: 2px solid rgba(234, 235, 238, 0.1);
-            text-align: left;
-            font-size: 11px;
-            letter-spacing: 0.3px;
-          }
-          td {
-            padding: 7px 3px;
-            border-bottom: 1px solid rgba(234, 235, 238, 0.04);
-            vertical-align: middle;
-          }
-          tr:hover {
-            background: rgba(234, 235, 238, 0.02);
-          }
-          img {
-            width: 18px;
-            height: 18px;
-            object-fit: contain;
-            vertical-align: middle;
-            display: inline-block;
-          }
-          .center {
-            text-align: center;
-          }
-          .bold {
-            font-weight: 700;
-          }
-          .favorite-team {
-            background: rgba(106, 116, 211, 0.15) !important;
-            font-weight: 600;
-          }
-          .favorite-team td:first-child {
-            border-left: 3px solid #6a74d3;
-            padding-left: 1px;
-          }
-          .diff-pos {
-            color: #4caf50;
-          }
-          .diff-neg {
-            color: #f44336;
-          }
-        </style>
-        <ha-card>
-          <div id="container"></div>
-        </ha-card>
+      const card = document.createElement('ha-card');
+      const style = document.createElement('style');
+      style.textContent = `
+        .buli-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-family: var(--paper-font-body1_-_font-family, sans-serif);
+          font-size: 13px;
+          color: #eaebee;
+          background-color: #1a1e24;
+          border-radius: 12px;
+          overflow: hidden;
+        }
+        .buli-table th {
+          padding: 10px 8px;
+          text-align: left;
+          color: #6a74d3;
+          font-weight: 700;
+          border-bottom: 2px solid #2a2f38;
+          text-transform: uppercase;
+          font-size: 11px;
+        }
+        .buli-table td {
+          padding: 8px;
+          border-bottom: 1px solid #2a2f38;
+          vertical-align: middle;
+        }
+        .buli-table tr:last-child td {
+          border-bottom: none;
+        }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .font-bold { font-weight: bold; }
+        .team-logo {
+          width: 18px;
+          height: 18px;
+          object-fit: contain;
+          vertical-align: middle;
+          margin-right: 8px;
+        }
+        .rank-border {
+          width: 4px;
+          padding: 0 !important;
+        }
+        /* Highlight für den SC Freiburg */
+        .highlight-freiburg {
+          background-color: rgba(106, 116, 211, 0.15) !important;
+          font-weight: 600;
+        }
+        .highlight-freiburg td {
+          border-color: rgba(106, 116, 211, 0.4) !important;
+        }
+        .diff-pos { color: #81D6AC; }
+        .diff-neg { color: #FF7F84; }
       `;
-      this.content = this.shadowRoot.getElementById('container');
+      card.appendChild(style);
+      this.content = document.createElement('div');
+      card.appendChild(this.content);
+      this.appendChild(card);
     }
+    this.render();
+  }
 
-    const state = hass.states[this.config.entity];
+  setConfig(config) {
+    this.config = config;
+  }
+
+  render() {
+    const entityId = this.config.entity;
+    const state = this._hass.states[entityId];
+
     if (!state || !state.attributes.entries) {
-      this.content.innerHTML = "<div style='padding: 10px;'>Warte auf Sensordaten...</div>";
+      this.content.innerHTML = `<div style="padding: 16px; color: #FF7F84;">Sensor-Daten werden geladen oder Entity nicht gefunden...</div>`;
       return;
     }
 
     const entries = state.attributes.entries;
     
-    // 1. Automatische Erkennung der Lieblingsvereine aus der Teamtracker-Integration
-    const favoriteTeams = [];
-    Object.keys(hass.states).forEach(id => {
-      if (id.startsWith('sensor.')) {
-        const s = hass.states[id];
-        // Teamtracker-Sensoren besitzen eindeutige Attribute wie 'team_name' oder 'opponent_id'
-        if (s.attributes && (s.attributes.team_name || s.attributes.opponent_id)) {
-          if (s.attributes.team_name) favoriteTeams.push(s.attributes.team_name.toLowerCase());
-          if (s.attributes.team_abbr) favoriteTeams.push(s.attributes.team_abbr.toLowerCase());
-          
-          // Fallback über den Entitätsnamen (z.B. sensor.sc_freiburg -> freiburg)
-          const cleanId = id.replace('sensor.', '').toLowerCase();
-          favoriteTeams.push(cleanId);
-          favoriteTeams.push(cleanId.replace(/_/g, ' '));
-        }
-      }
-    });
-
-    // Hilfsfunktion um Stats sicher via ESPN-Abkürzung auszulesen
-    const getStat = (stats, abbr) => {
-      const stat = stats.find(s => s.abbreviation && s.abbreviation.toUpperCase() === abbr.toUpperCase());
-      return stat ? stat.displayValue : '0';
+    // Namen-Bereinigung für deutsche Optik
+    const cleanName = (name) => {
+      const replacements = {
+        "Bayern Munich": "FC Bayern",
+        "Borussia Dortmund": "BVB",
+        "Bayer Leverkusen": "Leverkusen",
+        "Hamburg SV": "HSV",
+        "FC Cologne": "Köln",
+        "Werder Bremen": "Bremen",
+        "VfL Wolfsburg": "Wolfsburg",
+        "1. FC Heidenheim 1846": "Heidenheim",
+        "Borussia Moenchengladbach": "Gladbach",
+        "Borussia Mönchengladbach": "Gladbach",
+        "Eintracht Frankfurt": "Frankfurt",
+        "TSG Hoffenheim": "Hoffenheim",
+        "VfB Stuttgart": "Stuttgart",
+        "RB Leipzig": "RB Leipzig",
+        "FC Augsburg": "Augsburg",
+        "1. FC Union Berlin": "Union Berlin",
+        "St. Pauli": "St. Pauli"
+      };
+      return replacements[name] || name;
     };
 
-    let html = `
-      <table>
+    let tableHtml = `
+      <table class="buli-table">
         <thead>
           <tr>
-            <th style="width: 22px;">Pl.</th>
-            <th style="width: 22px;" class="center"></th>
+            <th class="rank-border"></th>
+            <th class="text-center" style="width: 25px;">Pl.</th>
             <th>Verein</th>
-            <th class="center" style="width: 24px;">Sp.</th>
-            <th class="center" style="width: 20px;">S</th>
-            <th class="center" style="width: 20px;">U</th>
-            <th class="center" style="width: 20px;">N</th>
-            <th class="center" style="width: 40px;">Tore</th>
-            <th class="center" style="width: 32px;">Diff.</th>
-            <th class="center" style="width: 26px;">Pkt.</th>
+            <th class="text-center">Sp.</th>
+            <th class="text-center">S</th>
+            <th class="text-center">U</th>
+            <th class="text-center">N</th>
+            <th class="text-center">Tore</th>
+            <th class="text-center">Diff.</th>
+            <th class="text-center" style="padding-right: 12px;">Pkt.</th>
           </tr>
         </thead>
         <tbody>
     `;
-    
-    entries.forEach((x) => {
-      let name = x.team.displayName;
-      if (x.team.name === "Bayern Munich") name = "FC Bayern";
-      else if (x.team.name === "Borussia Dortmund") name = "BVB";
-      else if (x.team.name === "Eintracht Frankfurt") name = "Frankfurt";
-      else if (x.team.name === "Bayer Leverkusen") name = "Leverkusen";
-      else if (x.team.name === "Borussia Moenchengladbach") name = "Gladbach";
 
-      // 2. Abgleich: Gehört dieses Team zu den Teamtracker-Favoriten?
-      const rowName = x.team.name.toLowerCase();
-      const rowDisplay = x.team.displayName.toLowerCase();
-      const rowMapped = name.toLowerCase();
+    entries.forEach((entry) => {
+      const team = entry.team;
+      const stats = entry.stats;
+
+      // Helferfunktion um Stats sicher nach Namen zu fischen
+      const getStat = (name) => {
+        const stat = stats.find(s => s.name === name);
+        return stat ? stat.value : 0;
+      };
+
+      const getStatDisplay = (name) => {
+        const stat = stats.find(s => s.name === name);
+        return stat ? stat.displayValue : '0';
+      };
+
+      const rank = getStat('rank');
+      const gp = getStat('gamesPlayed');
+      const w = getStat('wins');
+      const d = getStat('ties');
+      const l = getStat('losses');
+      const gf = getStat('pointsFor');
+      const ga = getStat('pointsAgainst');
+      const gd = getStat('pointDifferential');
+      const gdDisplay = getStatDisplay('pointDifferential');
+      const pts = getStat('points');
+
+      // ABSICHERUNG: Wenn "note" fehlt, nimm transparenten Hintergrund
+      const noteColor = entry.note?.color || 'transparent';
+      const logoUrl = team.logos && team.logos[0] ? team.logos[0].href : '';
       
-      const isFavorite = favoriteTeams.some(fav => 
-        fav.length > 2 && (
-          rowName.includes(fav) || 
-          rowDisplay.includes(fav) || 
-          rowMapped.includes(fav) ||
-          fav.includes(rowName) ||
-          fav.includes(rowDisplay)
-        )
-      );
+      // Prüfen ob es Freiburg ist für das Highlight
+      const isFreiburg = team.name === "SC Freiburg" || team.location === "SC Freiburg";
+      const rowClass = isFreiburg ? 'highlight-freiburg' : '';
+      
+      // Tordifferenz-Farbe
+      const diffClass = gd > 0 ? 'diff-pos' : (gd < 0 ? 'diff-neg' : '');
 
-      const logo = (x.team.logos && x.team.logos[0]) ? `<img src="${x.team.logos[0].href}">` : '⚽';
-
-      const rank = getStat(x.stats, 'R');
-      const gp = getStat(x.stats, 'GP');
-      const w = getStat(x.stats, 'W');
-      const d = getStat(x.stats, 'D');
-      const l = getStat(x.stats, 'L');
-      const f = getStat(x.stats, 'F');
-      const a = getStat(x.stats, 'A');
-      const gd = getStat(x.stats, 'GD');
-      const pts = getStat(x.stats, 'P');
-
-      let gdClass = '';
-      if (gd.startsWith('+')) gdClass = 'class="diff-pos"';
-      else if (gd.startsWith('-')) gdClass = 'class="diff-neg"';
-
-      html += `
-        <tr class="${isFavorite ? 'favorite-team' : ''}">
-          <td>${rank}</td>
-          <td class="center">${logo}</td>
-          <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${name}</td>
-          <td class="center">${gp}</td>
-          <td class="center">${w}</td>
-          <td class="center">${d}</td>
-          <td class="center">${l}</td>
-          <td class="center">${f}:${a}</td>
-          <td class="center" ${gdClass}>${gd}</td>
-          <td class="center bold">${pts}</td>
+      tableHtml += `
+        <tr class="${rowClass}">
+          <td class="rank-border" style="background-color: ${noteColor};"></td>
+          <td class="text-center font-bold">${rank}</td>
+          <td>
+            <img class="team-logo" src="${logoUrl}" alt="" loading="lazy">
+            <span>${cleanName(team.displayName)}</span>
+          </td>
+          <td class="text-center">${gp}</td>
+          <td class="text-center">${w}</td>
+          <td class="text-center">${d}</td>
+          <td class="text-center">${l}</td>
+          <td class="text-center" style="color: #eaebee; opacity: 0.7;">${gf}:${ga}</td>
+          <td class="text-center ${diffClass}">${gdDisplay}</td>
+          <td class="text-center font-bold" style="color: #6a74d3; padding-right: 12px;">${pts}</td>
         </tr>
       `;
     });
 
-    html += `</tbody></table>`;
-    if (this.content.innerHTML !== html) {
-      this.content.innerHTML = html;
-    }
+    tableHtml += `</tbody></table>`;
+    this.content.innerHTML = tableHtml;
   }
 
-  setConfig(config) {
-    if (!config.entity) throw new Error('Bitte eine Entität angeben');
-    this.config = config;
+  getCardSize() {
+    return 19;
   }
-
-  getCardSize() { return 6; }
 }
-customElements.define('buli-table-card', BuliTableCard);
+
+customElements.define('buli-table-card', BundesligaTableCard);
