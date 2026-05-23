@@ -4,14 +4,62 @@ class BuliTableCard extends HTMLElement {
       this.attachShadow({ mode: 'open' });
       this.shadowRoot.innerHTML = `
         <style>
-          ha-card { background: transparent; border: none; box-shadow: none; font-size: 12px; font-family: var(--paper-font-body1_-_font-family, sans-serif); color: var(--primary-text-color); }
-          table { width: 100%; border-collapse: collapse; }
-          th { color: var(--secondary-text-color); font-weight: 600; padding: 6px 2px; border-bottom: 1px solid rgba(234, 235, 238, 0.1); text-align: left; }
-          td { padding: 6px 2px; border-bottom: 1px solid rgba(234, 235, 238, 0.04); vertical-align: middle; }
-          img { width: 20px; height: 20px; object-fit: contain; vertical-align: middle; display: inline-block; }
-          .center { text-align: center; }
-          .freiburg { background: rgba(106, 116, 211, 0.15); font-weight: 600; }
-          .freiburg td:first-child { border-left: 3px solid #6a74d3; padding-left: 0px; }
+          ha-card {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            font-size: 11px;
+            font-family: var(--paper-font-body1_-_font-family, sans-serif);
+            color: var(--primary-text-color);
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          th {
+            color: var(--secondary-text-color);
+            font-weight: 600;
+            padding: 8px 3px;
+            border-bottom: 2px solid rgba(234, 235, 238, 0.1);
+            text-align: left;
+            font-size: 11px;
+            letter-spacing: 0.3px;
+          }
+          td {
+            padding: 7px 3px;
+            border-bottom: 1px solid rgba(234, 235, 238, 0.04);
+            vertical-align: middle;
+          }
+          tr:hover {
+            background: rgba(234, 235, 238, 0.02);
+          }
+          img {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            vertical-align: middle;
+            display: inline-block;
+          }
+          .center {
+            text-align: center;
+          }
+          .bold {
+            font-weight: 700;
+          }
+          .freiburg {
+            background: rgba(106, 116, 211, 0.15) !important;
+            font-weight: 600;
+          }
+          .freiburg td:first-child {
+            border-left: 3px solid #6a74d3;
+            padding-left: 1px;
+          }
+          .diff-pos {
+            color: #4caf50;
+          }
+          .diff-neg {
+            color: #f44336;
+          }
         </style>
         <ha-card>
           <div id="container"></div>
@@ -22,14 +70,38 @@ class BuliTableCard extends HTMLElement {
 
     const state = hass.states[this.config.entity];
     if (!state || !state.attributes.entries) {
-      this.content.innerHTML = "Warte auf Sensordaten...";
+      this.content.innerHTML = "<div style='padding: 10px;'>Warte auf Sensordaten...</div>";
       return;
     }
 
     const entries = state.attributes.entries;
-    let html = `<table><thead><tr><th>Pl.</th><th class="center"></th><th>Verein</th><th class="center">Sp.</th><th class="center">Tore</th><th class="center">Pkt.</th></tr></thead><tbody>`;
     
-    entries.forEach((x, index) => {
+    // Hilfsfunktion um Stats sicher via ESPN-Abkürzung auszulesen
+    const getStat = (stats, abbr) => {
+      const stat = stats.find(s => s.abbreviation && s.abbreviation.toUpperCase() === abbr.toUpperCase());
+      return stat ? stat.displayValue : '0';
+    };
+
+    let html = `
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 22px;">Pl.</th>
+            <th style="width: 22px;" class="center"></th>
+            <th>Verein</th>
+            <th class="center" style="width: 24px;">Sp.</th>
+            <th class="center" style="width: 20px;">S</th>
+            <th class="center" style="width: 20px;">U</th>
+            <th class="center" style="width: 20px;">N</th>
+            <th class="center" style="width: 40px;">Tore</th>
+            <th class="center" style="width: 32px;">Diff.</th>
+            <th class="center" style="width: 26px;">Pkt.</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    
+    entries.forEach((x) => {
       let name = x.team.displayName;
       if (x.team.name === "Bayern Munich") name = "FC Bayern";
       else if (x.team.name === "Borussia Dortmund") name = "BVB";
@@ -41,14 +113,33 @@ class BuliTableCard extends HTMLElement {
       const isFreiburg = x.team.name.includes("Freiburg");
       const logo = (x.team.logos && x.team.logos[0]) ? `<img src="${x.team.logos[0].href}">` : '⚽';
 
+      const rank = getStat(x.stats, 'R');
+      const gp = getStat(x.stats, 'GP');
+      const w = getStat(x.stats, 'W');
+      const d = getStat(x.stats, 'D');
+      const l = getStat(x.stats, 'L');
+      const f = getStat(x.stats, 'F');
+      const a = getStat(x.stats, 'A');
+      const gd = getStat(x.stats, 'GD');
+      const pts = getStat(x.stats, 'PTS');
+
+      // Tordifferenz farblich hervorheben (Grün bei +, Rot bei -)
+      let gdClass = '';
+      if (gd.startsWith('+')) gdClass = 'class="diff-pos"';
+      else if (gd.startsWith('-')) gdClass = 'class="diff-neg"';
+
       html += `
         <tr class="${isFreiburg ? 'freiburg' : ''}">
-          <td>${index + 1}</td>
+          <td>${rank}</td>
           <td class="center">${logo}</td>
-          <td>${name}</td>
-          <td class="center">${Math.round(x.stats[0].value)}</td>
-          <td class="center">${Math.round(x.stats[4].value)}:${Math.round(x.stats[3].value)}</td>
-          <td class="center"><strong>${Math.round(x.stats[2].value)}</strong></td>
+          <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${name}</td>
+          <td class="center">${gp}</td>
+          <td class="center">${w}</td>
+          <td class="center">${d}</td>
+          <td class="center">${l}</td>
+          <td class="center">${f}:${a}</td>
+          <td class="center" ${gdClass}>${gd}</td>
+          <td class="center bold">${pts}</td>
         </tr>
       `;
     });
@@ -64,6 +155,6 @@ class BuliTableCard extends HTMLElement {
     this.config = config;
   }
 
-  getCardSize() { return 3; }
+  getCardSize() { return 6; }
 }
 customElements.define('buli-table-card', BuliTableCard);
