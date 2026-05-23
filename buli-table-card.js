@@ -46,11 +46,11 @@ class BuliTableCard extends HTMLElement {
           .bold {
             font-weight: 700;
           }
-          .freiburg {
+          .favorite-team {
             background: rgba(106, 116, 211, 0.15) !important;
             font-weight: 600;
           }
-          .freiburg td:first-child {
+          .favorite-team td:first-child {
             border-left: 3px solid #6a74d3;
             padding-left: 1px;
           }
@@ -76,6 +76,24 @@ class BuliTableCard extends HTMLElement {
 
     const entries = state.attributes.entries;
     
+    // 1. Automatische Erkennung der Lieblingsvereine aus der Teamtracker-Integration
+    const favoriteTeams = [];
+    Object.keys(hass.states).forEach(id => {
+      if (id.startsWith('sensor.')) {
+        const s = hass.states[id];
+        // Teamtracker-Sensoren besitzen eindeutige Attribute wie 'team_name' oder 'opponent_id'
+        if (s.attributes && (s.attributes.team_name || s.attributes.opponent_id)) {
+          if (s.attributes.team_name) favoriteTeams.push(s.attributes.team_name.toLowerCase());
+          if (s.attributes.team_abbr) favoriteTeams.push(s.attributes.team_abbr.toLowerCase());
+          
+          // Fallback über den Entitätsnamen (z.B. sensor.sc_freiburg -> freiburg)
+          const cleanId = id.replace('sensor.', '').toLowerCase();
+          favoriteTeams.push(cleanId);
+          favoriteTeams.push(cleanId.replace(/_/g, ' '));
+        }
+      }
+    });
+
     // Hilfsfunktion um Stats sicher via ESPN-Abkürzung auszulesen
     const getStat = (stats, abbr) => {
       const stat = stats.find(s => s.abbreviation && s.abbreviation.toUpperCase() === abbr.toUpperCase());
@@ -108,9 +126,22 @@ class BuliTableCard extends HTMLElement {
       else if (x.team.name === "Eintracht Frankfurt") name = "Frankfurt";
       else if (x.team.name === "Bayer Leverkusen") name = "Leverkusen";
       else if (x.team.name === "Borussia Moenchengladbach") name = "Gladbach";
-      else if (x.team.name.includes("Freiburg")) name = "SC Freiburg";
 
-      const isFreiburg = x.team.name.includes("Freiburg");
+      // 2. Abgleich: Gehört dieses Team zu den Teamtracker-Favoriten?
+      const rowName = x.team.name.toLowerCase();
+      const rowDisplay = x.team.displayName.toLowerCase();
+      const rowMapped = name.toLowerCase();
+      
+      const isFavorite = favoriteTeams.some(fav => 
+        fav.length > 2 && (
+          rowName.includes(fav) || 
+          rowDisplay.includes(fav) || 
+          rowMapped.includes(fav) ||
+          fav.includes(rowName) ||
+          fav.includes(rowDisplay)
+        )
+      );
+
       const logo = (x.team.logos && x.team.logos[0]) ? `<img src="${x.team.logos[0].href}">` : '⚽';
 
       const rank = getStat(x.stats, 'R');
@@ -123,13 +154,12 @@ class BuliTableCard extends HTMLElement {
       const gd = getStat(x.stats, 'GD');
       const pts = getStat(x.stats, 'P');
 
-      // Tordifferenz farblich hervorheben (Grün bei +, Rot bei -)
       let gdClass = '';
       if (gd.startsWith('+')) gdClass = 'class="diff-pos"';
       else if (gd.startsWith('-')) gdClass = 'class="diff-neg"';
 
       html += `
-        <tr class="${isFreiburg ? 'freiburg' : ''}">
+        <tr class="${isFavorite ? 'favorite-team' : ''}">
           <td>${rank}</td>
           <td class="center">${logo}</td>
           <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${name}</td>
